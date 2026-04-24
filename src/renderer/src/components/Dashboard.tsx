@@ -13,7 +13,7 @@ import { createPortal } from 'react-dom'
 
 export default function Dashboard() {
   const [versions, setVersions] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
   const [switching, setSwitching] = useState<string | null>(null)
   const [showReleasesModal, setShowReleasesModal] = useState(false)
   const [installingVersion, setInstallingVersion] = useState<any>(null)
@@ -310,7 +310,7 @@ export default function Dashboard() {
           ))}
 
           {/* Empty State */}
-          {versions.length === 0 && !loading && (
+          {/*versions.length === 0 && !loading && (
             <div className="col-span-full py-12 flex flex-col items-center justify-center border-2 border-dashed border-black/5 dark:border-white/5 rounded-3xl">
               <p className="text-text-muted mb-4">No PHP versions installed yet.</p>
               <div className="flex gap-3">
@@ -327,7 +327,7 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-          )}
+          )*/}
         </div>
       </section>
       {/* Releases Modal */}

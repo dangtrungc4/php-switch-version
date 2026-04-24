@@ -42,8 +42,6 @@ export class PHPManager {
     let currentTarget = ''
     try {
       if (fs.existsSync(this.currentLink)) {
-        // readlink doesn't always work for directory junctions/symlinks on Windows as expected with fs.readlink
-        // but we can try to get the real path
         currentTarget = fs.realpathSync(this.currentLink)
       }
     } catch (e) {
@@ -52,7 +50,6 @@ export class PHPManager {
 
     return folders.map((folder) => {
       const fullPath = path.join(this.versionsDir, folder)
-      // Simple parsing: php-8.2.0-x64-ts
       const parts = folder.split('-')
       return {
         id: folder,
@@ -67,39 +64,85 @@ export class PHPManager {
   }
 
   async downloadAndInstall(url: string, id: string): Promise<void> {
-    const zipPath = path.join(this.baseDir, `${id}.zip`)
-    const destDir = path.join(this.versionsDir, id)
+    const baseDir = path.resolve(this.baseDir)
+    const versionsDir = path.resolve(this.versionsDir)
+    const zipPath = path.join(baseDir, `${id}.zip`)
+    const destDir = path.join(versionsDir, id)
 
-    if (!fs.existsSync(destDir)) fs.mkdirSync(destDir)
+    try {
+      if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
+      if (!fs.existsSync(versionsDir)) fs.mkdirSync(versionsDir, { recursive: true })
+      if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true })
+    } catch (err: any) {
+      throw new Error(
+        `Failed to create directories: ${err.message}. Please ensure the app has Administrator rights.`
+      )
+    }
 
-    // Download
-    const response = await axios({
-      url,
-      method: 'GET',
-      responseType: 'stream'
-    })
+    try {
+      console.log(`Downloading PHP from: ${url}`)
+      const response = await axios({
+        url,
+        method: 'GET',
+        responseType: 'stream',
+        timeout: 60000,
 
-    const writer = fs.createWriteStream(zipPath)
-    response.data.pipe(writer)
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      })
 
-    await new Promise<void>((resolve, reject) => {
-      writer.on('finish', () => resolve())
-      writer.on('error', reject)
-    })
+      const writer = fs.createWriteStream(zipPath)
+      response.data.pipe(writer)
 
-    // Extract
-    const zip = new StreamZip.async({ file: zipPath })
-    await zip.extract(null, destDir)
-    await zip.close()
+      await new Promise<void>((resolve, reject) => {
+        writer.on('finish', () => {
+          writer.close()
+          resolve()
+        })
+        writer.on('error', (err) => {
+          writer.close()
+          if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath)
+          reject(err)
+        })
+        response.data.on('error', (err) => {
+          writer.close()
+          if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath)
+          reject(err)
+        })
+      })
 
-    // Cleanup
-    fs.unlinkSync(zipPath)
+      if (!fs.existsSync(zipPath) || fs.statSync(zipPath).size === 0) {
+        throw new Error(`Download failed: Zip file is empty or missing at ${zipPath}`)
+      }
 
-    // Setup php.ini
-    const iniPath = path.join(destDir, 'php.ini')
-    const productionIni = path.join(destDir, 'php.ini-production')
-    if (fs.existsSync(productionIni) && !fs.existsSync(iniPath)) {
-      fs.copyFileSync(productionIni, iniPath)
+      console.log(`Extracting to: ${destDir}`)
+      const zip = new StreamZip.async({ file: zipPath })
+      await zip.extract(null, destDir)
+      await zip.close()
+
+      if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath)
+
+      const iniPath = path.join(destDir, 'php.ini')
+      const productionIni = path.join(destDir, 'php.ini-production')
+      const developmentIni = path.join(destDir, 'php.ini-development')
+
+      if (!fs.existsSync(iniPath)) {
+        if (fs.existsSync(productionIni)) {
+          fs.copyFileSync(productionIni, iniPath)
+        } else if (fs.existsSync(developmentIni)) {
+          fs.copyFileSync(developmentIni, iniPath)
+        }
+      }
+    } catch (error: any) {
+      if (fs.existsSync(zipPath)) {
+        try {
+          fs.unlinkSync(zipPath)
+        } catch (e) {}
+      }
+      console.error('Error installing version:', error)
+      throw new Error(error.message || 'Unknown error during installation')
     }
   }
 
@@ -108,7 +151,6 @@ export class PHPManager {
     if (!fs.existsSync(destDir)) return { success: false, error: 'Version not found' }
 
     try {
-      // Check if it's the active version
       let isActive = false
       if (fs.existsSync(this.currentLink)) {
         try {
@@ -116,9 +158,7 @@ export class PHPManager {
           if (currentTarget.toLowerCase() === destDir.toLowerCase()) {
             isActive = true
           }
-        } catch (e) {
-          // If junction is broken, we might still want to clean up destDir
-        }
+        } catch (e) {}
       }
 
       if (isActive) {
@@ -136,11 +176,6 @@ export class PHPManager {
     const targetDir = path.join(this.versionsDir, id)
     if (!fs.existsSync(targetDir)) throw new Error('Version not found')
 
-    // Create a combined command to:
-    // 1. Remove old symlink if exists
-    // 2. Create new symlink
-    // 3. Update System PATH if not already present
-    // We use a PowerShell script for this to handle logic cleanly in one elevation
     const psScript = `
       $link = '${this.currentLink}';
       $target = '${targetDir}';
@@ -173,8 +208,6 @@ export class PHPManager {
   }
 
   async getTerminalCommand(phpPath: string, workingDir?: string): Promise<string> {
-    // Returns a command to open a terminal with the specific PHP version prepended to PATH
-    // If workingDir is provided, it will cd into it.
     const cdCmd = workingDir ? `cd /d "${workingDir}" & ` : ''
     return `cmd /k "${cdCmd}set PATH=${phpPath};%PATH% & php -v"`
   }

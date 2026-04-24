@@ -1,4 +1,6 @@
+import { app } from 'electron'
 import { JSONFilePreset } from 'lowdb/node'
+import path from 'path'
 
 export interface AppData {
   projects: {
@@ -20,6 +22,7 @@ const defaultData: AppData = {
 }
 
 export async function getDb() {
-  const db = await JSONFilePreset<AppData>('db.json', defaultData)
+  const dbPath = path.join(app.getPath('userData'), 'db.json')
+  const db = await JSONFilePreset<AppData>(dbPath, defaultData)
   return db
 }
