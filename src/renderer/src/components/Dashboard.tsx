@@ -8,10 +8,10 @@ import {
   Terminal,
   X
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { JSX, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-export default function Dashboard() {
+export default function Dashboard(): JSX.Element {
   const [versions, setVersions] = useState<PHPVersion[]>([])
   const [availableVersions, setAvailableVersions] = useState<AvailableVersion[]>([])
   const [, setLoading] = useState(true)
@@ -41,10 +41,10 @@ export default function Dashboard() {
     message: ''
   })
 
-  const showInfo = (title: string, message: string) =>
+  const showInfo = (title: string, message: string): void =>
     setInfoModal({ isOpen: true, title, message })
 
-  const fetchVersions = async () => {
+  const fetchVersions = async (): Promise<void> => {
     setLoading(true)
     try {
       const [installed, available] = await Promise.all([
@@ -61,10 +61,11 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchVersions()
   }, [])
 
-  const handleSwitch = async (id: string) => {
+  const handleSwitch = async (id: string): Promise<void> => {
     setSwitching(id)
     try {
       await window.api.switchGlobal(id)
@@ -76,7 +77,7 @@ export default function Dashboard() {
     }
   }
 
-  const handleInstall = async (v: AvailableVersion) => {
+  const handleInstall = async (v: AvailableVersion): Promise<void> => {
     setInstallingVersion(v)
     setInstallStep('Downloading ZIP from windows.php.net...')
     try {
@@ -98,7 +99,7 @@ export default function Dashboard() {
     }
   }
 
-  const handleOpenTerminal = async () => {
+  const handleOpenTerminal = async (): Promise<void> => {
     if (activeVersion) {
       await window.api.openTerminal(activeVersion.path)
     } else {
@@ -492,6 +493,6 @@ export default function Dashboard() {
   )
 }
 
-function cn(...inputs: (string | boolean | undefined | null)[]) {
+function cn(...inputs: (string | boolean | undefined | null)[]): string {
   return inputs.filter(Boolean).join(' ')
 }

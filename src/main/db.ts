@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { Low } from 'lowdb'
 import { JSONFilePreset } from 'lowdb/node'
 import path from 'path'
 
@@ -21,7 +22,7 @@ const defaultData: AppData = {
   }
 }
 
-export async function getDb() {
+export async function getDb(): Promise<Low<AppData>> {
   const dbPath = path.join(app.getPath('userData'), 'db.json')
   const db = await JSONFilePreset<AppData>(dbPath, defaultData)
   return db

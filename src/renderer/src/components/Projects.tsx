@@ -26,7 +26,7 @@ export default function Projects(): JSX.Element {
   const [newProject, setNewProject] = useState({ name: '', path: '', phpVersionId: '' })
   const [searchQuery, setSearchQuery] = useState('')
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (): Promise<void> => {
     try {
       const [projData, verData] = await Promise.all([
         window.api.getProjects(),
@@ -42,17 +42,19 @@ export default function Projects(): JSX.Element {
   }, []) // fetchData now has zero dependencies and a stable identity
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData()
   }, [fetchData])
 
   // Set default PHP version when versions are loaded
   useEffect(() => {
     if (versions.length > 0 && !newProject.phpVersionId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNewProject((prev) => ({ ...prev, phpVersionId: versions[0].id }))
     }
   }, [versions, newProject.phpVersionId])
 
-  const handleSelectFolder = async () => {
+  const handleSelectFolder = async (): Promise<void> => {
     const folder = await window.api.selectFolder()
     if (folder) {
       const name = folder.split(/[\\/]/).pop() || ''
@@ -66,7 +68,7 @@ export default function Projects(): JSX.Element {
     }
   }
 
-  const handleAddProject = async () => {
+  const handleAddProject = async (): Promise<void> => {
     if (!newProject.name || !newProject.path || !newProject.phpVersionId) return
     await window.api.addProject({ ...newProject, id: Date.now().toString() })
     setShowAddModal(false)
@@ -75,8 +77,14 @@ export default function Projects(): JSX.Element {
     fetchData()
   }
 
-  const handleUpdateProject = async () => {
-    if (!editingProject || !editingProject.name || !editingProject.path || !editingProject.phpVersionId) return
+  const handleUpdateProject = async (): Promise<void> => {
+    if (
+      !editingProject ||
+      !editingProject.name ||
+      !editingProject.path ||
+      !editingProject.phpVersionId
+    )
+      return
     await window.api.updateProject(editingProject)
     setShowEditModal(false)
     setEditingProject(null)
@@ -84,7 +92,7 @@ export default function Projects(): JSX.Element {
     fetchData()
   }
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (): Promise<void> => {
     if (projectToDelete) {
       await window.api.deleteProject(projectToDelete.id)
       setShowDeleteConfirm(false)
@@ -94,14 +102,14 @@ export default function Projects(): JSX.Element {
     }
   }
 
-  const handleOpenTerminal = async (phpVersionId: string, projectPath: string) => {
+  const handleOpenTerminal = async (phpVersionId: string, projectPath: string): Promise<void> => {
     const version = versions.find((v) => v.id === phpVersionId)
     if (version) {
       await window.api.openTerminal(version.path, projectPath)
     }
   }
 
-  const handleOpenFolder = async (path: string) => {
+  const handleOpenFolder = async (path: string): Promise<void> => {
     await window.api.openFolder(path)
   }
 
@@ -145,7 +153,7 @@ export default function Projects(): JSX.Element {
             className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl py-2.5 pl-11 pr-4 focus:outline-hidden focus:border-indigo-500/50 transition-colors text-text-main"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-black/5 dark:bg-white/5 border border-border rounded-xl text-text-muted hover:text-text-main hover:bg-black/10 dark:bg-white/10 transition-all">
+        <button className="flex items-center gap-2 px-4 py-2.5 bg-black/5 border border-border rounded-xl text-text-muted hover:text-text-main hover:bg-black/10 dark:bg-white/10 transition-all">
           <Filter className="w-4 h-4" />
           Filter
         </button>
@@ -264,7 +272,7 @@ export default function Projects(): JSX.Element {
         <div className="flex justify-center pt-8">
           <button
             onClick={() => setVisibleCount((prev) => prev + 6)}
-            className="px-8 py-3 bg-black/5 dark:bg-white/5 border border-border rounded-2xl text-text-main font-bold hover:bg-black/10 dark:bg-white/10 transition-all hover:scale-105 active:scale-95"
+            className="px-8 py-3 bg-black/5 border border-border rounded-2xl text-text-main font-bold hover:bg-black/10 dark:bg-white/10 transition-all hover:scale-105 active:scale-95"
           >
             Load More Projects
           </button>
@@ -314,7 +322,7 @@ export default function Projects(): JSX.Element {
                       />
                       <button
                         onClick={handleSelectFolder}
-                        className="px-4 py-2.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 border border-border rounded-xl font-medium transition-all text-text-main"
+                        className="px-4 py-2.5 bg-black/5 hover:bg-black/10 dark:bg-white/10 border border-border rounded-xl font-medium transition-all text-text-main"
                       >
                         Browse
                       </button>
@@ -405,7 +413,7 @@ export default function Projects(): JSX.Element {
                       />
                       <button
                         onClick={handleSelectFolder}
-                        className="px-4 py-2.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 border border-border rounded-xl font-medium transition-all text-text-main"
+                        className="px-4 py-2.5 bg-black/5 hover:bg-black/10 dark:bg-white/10 border border-border rounded-xl font-medium transition-all text-text-main"
                       >
                         Change
                       </button>
@@ -448,7 +456,7 @@ export default function Projects(): JSX.Element {
                   <div className="flex gap-3 mt-4">
                     <button
                       onClick={() => setShowEditModal(false)}
-                      className="flex-1 py-4 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 text-text-main rounded-2xl font-bold transition-all border border-border"
+                      className="flex-1 py-4 bg-black/5 hover:bg-black/10 dark:bg-white/10 text-text-main rounded-2xl font-bold transition-all border border-border"
                     >
                       Cancel
                     </button>
@@ -492,7 +500,7 @@ export default function Projects(): JSX.Element {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="flex-1 py-4 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 text-text-main rounded-2xl font-bold transition-all border border-border"
+                    className="flex-1 py-4 bg-black/5 hover:bg-black/10 dark:bg-white/10 text-text-main rounded-2xl font-bold transition-all border border-border"
                   >
                     Cancel
                   </button>

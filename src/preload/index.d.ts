@@ -40,5 +40,5 @@ interface Window {
     openPhpIni: (phpPath: string) => Promise<{ success: boolean }>
     getAvailableVersions: () => Promise<AvailableVersion[]>
   }
-  electron: any
+  electron: ElectronAPI
 }

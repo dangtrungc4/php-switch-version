@@ -5,13 +5,13 @@ import fs from 'fs'
 import path, { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { getDb } from './db'
-import { PHPManager } from './php-manager'
+import { AvailableVersion, PHPManager, PHPVersion, Project } from './php-manager'
 
 function isElevated(): boolean {
   try {
     execSync('net session', { stdio: 'ignore' })
     return true
-  } catch (e) {
+  } catch {
     return false
   }
 }
@@ -51,7 +51,7 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then((): void => {
   if (process.platform === 'win32' && !isElevated()) {
     // Attempt to relaunch as administrator
     const args = process.argv.slice(1).join(' ')
@@ -85,70 +85,76 @@ app.whenReady().then(() => {
   const phpManager = new PHPManager()
 
   // IPC Handlers
-  ipcMain.handle('get-installed-versions', async () => {
+  ipcMain.handle('get-installed-versions', async (): Promise<PHPVersion[]> => {
     return await phpManager.getInstalledVersions()
   })
 
-  ipcMain.handle('get-available-versions', async () => {
+  ipcMain.handle('get-available-versions', async (): Promise<AvailableVersion[]> => {
     return await phpManager.getAvailableVersions()
   })
 
-  ipcMain.handle('install-version', async (_, { url, id }) => {
+  ipcMain.handle('install-version', async (_, { url, id }): Promise<{ success: boolean }> => {
     await phpManager.downloadAndInstall(url, id)
     return { success: true }
   })
 
-  ipcMain.handle('switch-global', async (_, id) => {
+  ipcMain.handle('switch-global', async (_, id): Promise<{ success: boolean }> => {
     await phpManager.switchGlobal(id)
     const db = await getDb()
     await db.update((data) => (data.settings.globalPhpVersionId = id))
     return { success: true }
   })
 
-  ipcMain.handle('uninstall-php', async (_, id) => {
+  ipcMain.handle('uninstall-php', async (_, id): Promise<{ success: boolean }> => {
     return await phpManager.uninstall(id)
   })
 
-  ipcMain.handle('open-php-ini', async (_, phpPath) => {
-    const iniPath = path.join(phpPath, 'php.ini')
-    if (fs.existsSync(iniPath)) {
-      shell.openPath(iniPath)
-      return { success: true }
-    } else {
-      // Try development or production template
-      const devIni = path.join(phpPath, 'php.ini-development')
-      if (fs.existsSync(devIni)) {
-        fs.copyFileSync(devIni, iniPath)
+  ipcMain.handle(
+    'open-php-ini',
+    async (_, phpPath): Promise<{ success: boolean; error?: string }> => {
+      const iniPath = path.join(phpPath, 'php.ini')
+      if (fs.existsSync(iniPath)) {
         shell.openPath(iniPath)
         return { success: true }
+      } else {
+        // Try development or production template
+        const devIni = path.join(phpPath, 'php.ini-development')
+        if (fs.existsSync(devIni)) {
+          fs.copyFileSync(devIni, iniPath)
+          shell.openPath(iniPath)
+          return { success: true }
+        }
       }
+      return { success: false, error: 'php.ini not found' }
     }
-    return { success: false, error: 'php.ini not found' }
-  })
+  )
 
-  ipcMain.handle('get-projects', async () => {
+  ipcMain.handle('get-projects', async (): Promise<Project[]> => {
     const db = await getDb()
     return db.data.projects
   })
 
-  ipcMain.handle('add-project', async (_, project) => {
+  ipcMain.handle('add-project', async (_, project: Project): Promise<{ success: boolean }> => {
     const db = await getDb()
     await db.update((data) => data.projects.push(project))
     return { success: true }
   })
 
-  ipcMain.handle('update-project', async (_, project) => {
-    const db = await getDb()
-    await db.update((data) => {
-      const index = data.projects.findIndex((p) => p.id === project.id)
-      if (index !== -1) {
-        data.projects[index] = { ...data.projects[index], ...project }
-      }
-    })
-    return { success: true }
-  })
+  ipcMain.handle(
+    'update-project',
+    async (_, project: Partial<Project>): Promise<{ success: boolean }> => {
+      const db = await getDb()
+      await db.update((data) => {
+        const index = data.projects.findIndex((p) => p.id === project.id)
+        if (index !== -1) {
+          data.projects[index] = { ...data.projects[index], ...project }
+        }
+      })
+      return { success: true }
+    }
+  )
 
-  ipcMain.handle('delete-project', async (_, id) => {
+  ipcMain.handle('delete-project', async (_, id): Promise<{ success: boolean }> => {
     const db = await getDb()
     await db.update((data) => {
       data.projects = data.projects.filter((p) => p.id !== id)
@@ -156,12 +162,12 @@ app.whenReady().then(() => {
     return { success: true }
   })
 
-  ipcMain.handle('open-folder', async (_, path) => {
+  ipcMain.handle('open-folder', async (_, path): Promise<{ success: boolean }> => {
     shell.openPath(path)
     return { success: true }
   })
 
-  ipcMain.handle('select-folder', async () => {
+  ipcMain.handle('select-folder', async (): Promise<string | null> => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
       properties: ['openDirectory']
     })
@@ -169,20 +175,20 @@ app.whenReady().then(() => {
     return filePaths[0]
   })
 
-  ipcMain.handle('open-terminal', async (_, phpPath, workingDir) => {
+  ipcMain.handle('open-terminal', async (_, phpPath, workingDir): Promise<{ success: boolean }> => {
     const command = await phpManager.getTerminalCommand(phpPath, workingDir)
     exec(`start ${command}`)
     return { success: true }
   })
 
-  ipcMain.handle('open-env-editor', async () => {
+  ipcMain.handle('open-env-editor', async (): Promise<{ success: boolean }> => {
     exec('rundll32.exe sysdm.cpl,EditEnvironmentVariables')
     return { success: true }
   })
 
   createWindow()
 
-  app.on('activate', function () {
+  app.on('activate', function (): void {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -192,7 +198,7 @@ app.whenReady().then(() => {
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
+app.on('window-all-closed', (): void => {
   if (process.platform !== 'darwin') {
     app.quit()
   }

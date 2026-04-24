@@ -38,7 +38,7 @@ export class PHPManager {
     this.ensureDirs()
   }
 
-  private ensureDirs() {
+  private ensureDirs(): void {
     if (!fs.existsSync(this.baseDir)) fs.mkdirSync(this.baseDir, { recursive: true })
     if (!fs.existsSync(this.versionsDir)) fs.mkdirSync(this.versionsDir, { recursive: true })
   }
@@ -146,7 +146,9 @@ export class PHPManager {
       if (fs.existsSync(zipPath)) {
         try {
           fs.unlinkSync(zipPath)
-        } catch (e) {}
+        } catch {
+          // Ignore errors
+        }
       }
       console.error('Error installing version:', error)
       throw new Error(error instanceof Error ? error.message : 'Unknown error during installation')
@@ -165,7 +167,9 @@ export class PHPManager {
           if (currentTarget.toLowerCase() === destDir.toLowerCase()) {
             isActive = true
           }
-        } catch (e) {}
+        } catch {
+          // Ignore errors
+        }
       }
 
       if (isActive) {

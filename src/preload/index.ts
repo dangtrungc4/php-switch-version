@@ -1,13 +1,14 @@
 import { electronAPI } from '@electron-toolkit/preload'
-import { contextBridge, ipcRenderer } from 'electron'// Custom APIs for renderer
+import { contextBridge, ipcRenderer } from 'electron'
+import { Project } from '../main/php-manager'
 const api = {
   getInstalledVersions: () => ipcRenderer.invoke('get-installed-versions'),
   installVersion: (data: { url: string; id: string }) =>
     ipcRenderer.invoke('install-version', data),
   switchGlobal: (id: string) => ipcRenderer.invoke('switch-global', id),
   getProjects: () => ipcRenderer.invoke('get-projects'),
-  addProject: (project: any) => ipcRenderer.invoke('add-project', project),
-  updateProject: (project: any) => ipcRenderer.invoke('update-project', project),
+  addProject: (project: Project) => ipcRenderer.invoke('add-project', project),
+  updateProject: (project: Project) => ipcRenderer.invoke('update-project', project),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   openTerminal: (phpPath: string, workingDir?: string) =>
     ipcRenderer.invoke('open-terminal', phpPath, workingDir),

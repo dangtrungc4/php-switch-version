@@ -1,7 +1,7 @@
 import { Moon, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { JSX, useEffect, useState } from 'react'
 
-export default function ThemeToggle() {
+export default function ThemeToggle(): JSX.Element {
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem('theme')
     return saved ? saved === 'dark' : true // Default to dark as per request
