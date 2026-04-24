@@ -1,15 +1,8 @@
 import { motion } from 'framer-motion'
-import {
-  ArrowRight,
-  CheckCircle2,
-  Download,
-  ExternalLink,
-  ShieldCheck,
-  Terminal,
-  X
-} from 'lucide-react'
+import { CheckCircle2, Download, ExternalLink, ShieldCheck, Terminal, X } from 'lucide-react'
 import { JSX, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import ThemeToggle from './ThemeToggle'
 
 export default function Dashboard(): JSX.Element {
   const [versions, setVersions] = useState<PHPVersion[]>([])
@@ -119,18 +112,32 @@ export default function Dashboard(): JSX.Element {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-text-main">System Dashboard</h2>
-          <p className="text-text-muted mt-2 text-sm font-medium">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-text-main">
+            System Dashboard
+          </h2>
+          <p className="text-text-muted mt-2 text-sm md:text-lg font-medium">
             Manage global PHP versions and environment status.
           </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <button
+            onClick={() => setShowReleasesModal(true)}
+            className="flex items-center justify-center gap-3 px-8 py-3.5 bg-linear-to-r from-indigo-600 to-indigo-500 text-white rounded-2xl font-bold transition-all btn-glow active:scale-95 hover:-translate-y-0.5 w-full md:w-auto"
+          >
+            <Download className="w-5 h-5" />
+            Check Releases
+          </button>
+          <div className="flex justify-center md:block">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
       {/* Global Status Card */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 glass rounded-4xl p-8 relative overflow-hidden border-border bg-white dark:bg-white/5 shadow-xl shadow-black/5 dark:shadow-none">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8">
+        <div className="md:col-span-12 lg:col-span-8 glass rounded-4xl p-6 md:p-8 relative overflow-hidden border-border bg-white dark:bg-white/5 shadow-xl shadow-black/5 dark:shadow-none">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <ShieldCheck className="w-20 h-20 text-indigo-500" />
           </div>
@@ -176,35 +183,6 @@ export default function Dashboard(): JSX.Element {
             </div>
           </div>
         </div>
-
-        <div className="lg:col-span-4 glass rounded-4xl p-8 relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-500">
-          <div className="absolute inset-0 bg-linear-to-br from-indigo-500/10 via-purple-500/5 to-transparent z-0" />
-          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-40 h-40 bg-indigo-500/20 blur-3xl rounded-full group-hover:bg-indigo-500/30 transition-colors duration-700" />
-
-          <div className="relative z-10 h-full flex flex-col justify-between">
-            <div>
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-white/5 border border-border flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                <Download className="w-6 h-6 text-indigo-400 group-hover:-translate-y-1 transition-transform duration-500" />
-              </div>
-              <h4 className="font-black text-2xl text-text-main tracking-tight mb-3">
-                Quick Install
-              </h4>
-              <p className="text-text-muted text-sm font-medium leading-relaxed">
-                Fetch and install the latest PHP versions directly from the official PHP.net
-              </p>
-            </div>
-
-            <button
-              onClick={() => setShowReleasesModal(true)}
-              className="mt-8 flex items-center justify-between w-full p-4 bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-500/25 group-hover:shadow-indigo-500/40 hover:-translate-y-0.5"
-            >
-              <span>Browse Releases</span>
-              <div className="w-8 h-8 rounded-xl bg-black/20 dark:bg-white/20 flex items-center justify-center group-hover:translate-x-1 transition-transform">
-                <ArrowRight className="w-4 h-4" />
-              </div>
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Installed Versions */}
@@ -218,76 +196,84 @@ export default function Dashboard(): JSX.Element {
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-3">
           {versions.map((v) => (
             <motion.div
               layout
               key={v.id}
               className={cn(
-                'glass rounded-2xl p-5 border transition-all duration-300 group',
+                'glass rounded-[1.25rem] p-3 md:p-4 border transition-all duration-300 group flex flex-col md:flex-row md:items-center justify-between gap-4',
                 v.active
                   ? 'border-indigo-500/50 bg-indigo-500/5 shadow-lg shadow-indigo-500/5'
                   : 'border-black/5 hover:border-black/20 dark:border-white/20'
               )}
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-black/10 dark:bg-slate-800 flex items-center justify-center font-bold text-text-muted group-hover:text-indigo-400 transition-colors">
-                    {v.version.split('.')[0]}
+              {/* Left Side: Version Info */}
+              <div className="flex items-center gap-4 flex-1">
+                <div className="w-10 h-10 shrink-0 rounded-xl bg-black/10 dark:bg-slate-800 flex items-center justify-center font-bold text-text-muted group-hover:text-indigo-400 transition-colors">
+                  {v.version.split('.')[0]}
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 flex-1">
+                  <div className="flex items-center gap-3">
+                    <h4 className="font-bold text-base text-text-main">PHP {v.version}</h4>
+                    {v.active && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20 md:hidden">
+                        ACTIVE
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <h4 className="font-bold text-text-main">PHP {v.version}</h4>
-                    <div className="flex gap-2 mt-1">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/10 dark:bg-slate-800 text-text-muted font-bold uppercase">
-                        {v.type}
-                      </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/10 dark:bg-slate-800 text-text-muted font-bold uppercase">
-                        {v.arch}
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-black/10 dark:bg-slate-800 text-text-muted font-bold uppercase">
+                      {v.type}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-black/10 dark:bg-slate-800 text-text-muted font-bold uppercase">
+                      {v.arch}
+                    </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Right Side: Actions */}
+              <div className="flex items-center gap-2 md:gap-3 shrink-0 self-end md:self-auto">
                 {v.active && (
-                  <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
+                  <span className="hidden md:flex items-center gap-1 text-[10px] font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20 mr-2">
                     ACTIVE
                   </span>
                 )}
-              </div>
 
-              <div className="flex flex-col gap-2 mt-4">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => window.api.openPhpIni(v.path)}
-                    className="flex-1 py-1.5 bg-black/5 hover:bg-black/10 dark:bg-white/10 text-text-muted rounded-lg text-[10px] font-bold transition-all border border-black/5 dark:border-white/5"
-                  >
-                    php.ini
-                  </button>
-                  <button
-                    onClick={() => {
-                      setConfirmModal({
-                        isOpen: true,
-                        title: 'Uninstall PHP',
-                        message: `Are you sure you want to uninstall PHP ${v.version}? This will permanently remove all files and settings for this version.`,
-                        onConfirm: async () => {
-                          await window.api.uninstallPHP(v.id)
-                          fetchVersions()
-                        }
-                      })
-                    }}
-                    className="flex-1 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-[10px] font-bold transition-all border border-red-500/10"
-                  >
-                    Uninstall
-                  </button>
-                </div>
+                <button
+                  onClick={() => window.api.openPhpIni(v.path)}
+                  className="px-4 py-2.5 md:py-2 bg-black/5 hover:bg-black/10 dark:bg-white/10 text-text-muted hover:text-text-main rounded-xl text-xs font-bold transition-all border border-black/5 dark:border-white/5"
+                >
+                  php.ini
+                </button>
+
                 {!v.active && (
                   <button
                     onClick={() => handleSwitch(v.id)}
                     disabled={switching !== null}
-                    className="w-full py-2 bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                    className="px-4 py-2.5 md:py-2 bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 min-w-[110px]"
                   >
-                    {switching === v.id ? 'Switching...' : 'Switch Global'}
+                    {switching === v.id ? 'Switching...' : 'Set Global'}
                   </button>
                 )}
+
+                <button
+                  onClick={() => {
+                    setConfirmModal({
+                      isOpen: true,
+                      title: 'Uninstall PHP',
+                      message: `Are you sure you want to uninstall PHP ${v.version}? This will permanently remove all files and settings for this version.`,
+                      onConfirm: async () => {
+                        await window.api.uninstallPHP(v.id)
+                        fetchVersions()
+                      }
+                    })
+                  }}
+                  className="px-4 py-2.5 md:py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs font-bold transition-all border border-red-500/10"
+                >
+                  Uninstall
+                </button>
               </div>
             </motion.div>
           ))}

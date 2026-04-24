@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { createPortal } from 'react-dom'
+import ThemeToggle from './ThemeToggle'
 
 export default function Projects(): JSX.Element {
   const [projects, setProjects] = useState<Project[]>([])
@@ -125,116 +126,120 @@ export default function Projects(): JSX.Element {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-text-main">Project Manager</h2>
-          <p className="text-text-muted mt-1 font-medium">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-text-main">
+            Project Manager
+          </h2>
+          <p className="text-text-muted mt-1 font-medium text-sm md:text-lg">
             Configure specific PHP versions for your workspaces.
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-indigo-500 text-white rounded-2xl font-bold transition-all shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 active:scale-95 hover:-translate-y-0.5"
-        >
-          <Plus className="w-5 h-5" />
-          Add New Project
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center justify-center gap-3 px-8 py-3.5 bg-linear-to-r from-indigo-600 to-indigo-500 text-white rounded-2xl font-bold transition-all btn-glow active:scale-95 hover:-translate-y-0.5 w-full md:w-auto"
+          >
+            <Plus className="w-5 h-5" />
+            Add New Project
+          </button>
+          <div className="flex justify-center md:block">
+            <ThemeToggle />
+          </div>
+        </div>
       </header>
 
       {/* Search & Filter */}
-      <div className="flex gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+      <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch md:items-center">
+        <div className="flex-1 relative group">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted group-focus-within:text-indigo-500 transition-colors" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search projects..."
-            className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-xl py-2.5 pl-11 pr-4 focus:outline-hidden focus:border-indigo-500/50 transition-colors text-text-main"
+            className="w-full bg-black/5 dark:bg-white/5 border border-border rounded-[1.25rem] py-3.5 pl-14 pr-4 focus:outline-hidden focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/5 transition-all text-text-main text-lg"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 bg-black/5 border border-border rounded-xl text-text-muted hover:text-text-main hover:bg-black/10 dark:bg-white/10 transition-all">
-          <Filter className="w-4 h-4" />
+        <button className="flex items-center justify-center gap-3 px-6 py-3.5 bg-black/5 border border-border rounded-[1.25rem] text-text-muted font-bold hover:text-text-main hover:bg-black/10 dark:bg-white/10 transition-all w-full md:w-auto">
+          <Filter className="w-5 h-5" />
           Filter
         </button>
       </div>
 
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex flex-col gap-2 md:gap-3">
         {visibleProjects.map((project) => {
           const version = versions.find((v) => v.id === project.phpVersionId)
           return (
             <motion.div
               key={project.id}
               layout
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass group rounded-[2.5rem] p-7 border-border bg-white dark:bg-white/5 hover:border-indigo-500/30 transition-all duration-500 shadow-xl shadow-black/5 dark:shadow-none"
+              className="group rounded-[1.25rem] p-3 md:p-4 border border-border bg-white dark:bg-white/5 hover:border-indigo-500/30 transition-all duration-300 flex flex-row items-center gap-3 shadow-sm"
             >
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-                    <Folder className="w-6 h-6 text-indigo-400" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-lg text-text-main group-hover:text-indigo-400 transition-colors truncate max-w-[150px]">
-                      {project.name}
-                    </h4>
-                    <p className="text-xs text-text-muted font-mono truncate max-w-[150px]">
-                      {project.path}
-                    </p>
-                  </div>
+              {/* Icon & Details */}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-10 h-10 shrink-0 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Folder className="w-5 h-5 text-indigo-400" />
                 </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => handleOpenFolder(project.path)}
-                    className="p-2 hover:bg-black/5 dark:bg-white/5 rounded-lg text-text-muted hover:text-text-main transition-colors"
-                    title="Open Folder"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setProjectToDelete(project)
-                      setShowDeleteConfirm(true)
-                    }}
-                    className="p-2 hover:bg-red-500/10 rounded-lg text-text-muted hover:text-red-400 transition-colors"
-                    title="Delete Project"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <h4 className="font-bold text-base text-text-main group-hover:text-indigo-400 transition-colors truncate shrink-0 max-w-[150px] md:max-w-[200px]">
+                    {project.name}
+                  </h4>
+                  <p className="text-sm text-text-muted font-medium truncate opacity-60 flex-1 min-w-0 hidden sm:block">
+                    {project.path}
+                  </p>
                 </div>
               </div>
 
-              <div className="bg-black/10 dark:bg-black/20 rounded-2xl p-4 flex items-center justify-between mb-6 border border-border">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-sm font-semibold text-text-main">
-                    {version ? `PHP ${version.version}` : 'Unknown Version'}
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded">
+              {/* Version Info */}
+              <div className="flex items-center gap-2 shrink-0 px-2 md:px-4 md:w-[150px]">
+                <div className="w-2 h-2 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                <span className="text-sm font-bold text-text-main truncate">
+                  PHP {version?.version || 'Unknown'}
+                </span>
+                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest bg-black/10 dark:bg-white/5 px-2 py-0.5 rounded-md hidden md:inline">
                   {version?.type || 'N/A'}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Actions */}
+              <div className="flex items-center gap-1 md:gap-1.5 shrink-0">
                 <button
                   onClick={() => handleOpenTerminal(project.phpVersionId, project.path)}
-                  className="flex items-center justify-center gap-2 py-2.5 bg-black/10 dark:bg-slate-800 hover:bg-slate-700 dark:hover:bg-slate-600  rounded-xl text-sm text-white font-bold transition-all border border-black/5 dark:border-white/5"
+                  className="p-2 hover:bg-slate-900 dark:hover:bg-white/10 rounded-lg text-text-muted hover:text-white dark:hover:text-text-main transition-colors"
+                  title="Open Terminal"
                 >
-                  <Terminal className="w-4 h-4" />
-                  Terminal
+                  <Terminal className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+                <button
+                  onClick={() => handleOpenFolder(project.path)}
+                  className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-text-muted hover:text-text-main transition-colors"
+                  title="Open Folder"
+                >
+                  <ExternalLink className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
                 <button
                   onClick={() => {
                     setEditingProject(project)
                     setShowEditModal(true)
                   }}
-                  className="flex items-center justify-center gap-2 py-2.5 bg-black/5 dark:bg-white/5 hover:bg-black/10 text-text-muted hover:text-text-main rounded-xl text-sm font-bold transition-all border border-border"
+                  className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-text-muted hover:text-text-main transition-colors"
+                  title="Settings"
                 >
-                  <Settings className="w-4 h-4" />
-                  Settings
+                  <Settings className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    setProjectToDelete(project)
+                    setShowDeleteConfirm(true)
+                  }}
+                  className="p-2 hover:bg-red-500/10 rounded-lg text-text-muted hover:text-red-500 transition-colors"
+                  title="Delete Project"
+                >
+                  <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               </div>
             </motion.div>
