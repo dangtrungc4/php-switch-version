@@ -52,8 +52,27 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  if (process.platform === 'win32' && !isElevated()) {
+    // Attempt to relaunch as administrator
+    const args = process.argv.slice(1).join(' ')
+    const command = `Start-Process -FilePath "${process.execPath}" -ArgumentList "${args.replace(/"/g, '`"')}" -Verb RunAs`
+
+    exec(`powershell.exe -Command "${command}"`, (error) => {
+      if (error) {
+        dialog.showErrorBox(
+          'Administrator Rights Required',
+          'This application needs Administrator rights to manage symlinks and environment variables. Please restart the app as Administrator.'
+        )
+        app.quit()
+      } else {
+        app.quit()
+      }
+    })
+    return
+  }
+
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.phpmanager.app')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -157,13 +176,6 @@ app.whenReady().then(() => {
     return { success: true }
   })
 
-  if (!isElevated() && process.platform === 'win32') {
-    dialog.showErrorBox(
-      'Administrator Rights Required',
-      'This application needs Administrator rights to manage symlinks and environment variables. Please restart the app as Administrator.'
-    )
-  }
-
   createWindow()
 
   app.on('activate', function () {
@@ -181,6 +193,3 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
