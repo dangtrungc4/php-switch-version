@@ -40,7 +40,3 @@ npm run build:win
 ## Important Note
 
 This application requires **Administrator Rights** to create symlinks at `C:\PHPManager\current`. Please run your terminal or the app as Administrator.
-
----
-
-_Created as part of the Action Plan implementation._
