@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { AnimatePresence, motion } from 'framer-motion'
-import { FolderCode, LayoutDashboard } from 'lucide-react'
+import { FolderCode, LayoutDashboard, type LucideIcon } from 'lucide-react'
 import { useState, type JSX } from 'react'
 import { twMerge } from 'tailwind-merge'
 import logo from './assets/logo.png'
@@ -8,14 +8,14 @@ import Dashboard from './components/Dashboard'
 import Projects from './components/Projects'
 import ThemeToggle from './components/ThemeToggle'
 
-function cn(...inputs: ClassValue[]) {
+function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs))
 }
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects'>('dashboard')
 
-  const tabs: { id: 'dashboard' | 'projects'; label: string; icon: React.ComponentType<any> }[] = [
+  const tabs: { id: 'dashboard' | 'projects'; label: string; icon: LucideIcon }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'projects', label: 'Projects', icon: FolderCode }
   ]
