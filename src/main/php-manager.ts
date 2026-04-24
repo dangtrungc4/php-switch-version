@@ -143,6 +143,7 @@ export class PHPManager {
         }
       }
 
+      await this.ensureCacert()
       this.fixPhpIni(destDir)
     } catch (error: unknown) {
       if (fs.existsSync(zipPath)) {
@@ -190,6 +191,7 @@ export class PHPManager {
     if (!fs.existsSync(targetDir)) throw new Error('Version not found')
 
     // Fix php.ini before switching to ensure extensions work
+    await this.ensureCacert()
     this.fixPhpIni(targetDir)
 
     const psScript = `
@@ -343,6 +345,46 @@ export class PHPManager {
       }
     })
 
+    // Fix SSL CA Bundle
+    const cacertPath = path.join(this.baseDir, 'cacert.pem')
+    const cacertPathFormatted = cacertPath.replace(/\\/g, '/')
+
+    if (fs.existsSync(cacertPath)) {
+      const curlCaLine = `curl.cainfo = "${cacertPathFormatted}"`
+      const opensslCaLine = `openssl.cafile = "${cacertPathFormatted}"`
+
+      if (content.includes('curl.cainfo')) {
+        content = content.replace(/^;?\s*curl.cainfo\s*=\s*.*$/m, curlCaLine)
+      } else {
+        content += `\n${curlCaLine}`
+      }
+
+      if (content.includes('openssl.cafile')) {
+        content = content.replace(/^;?\s*openssl.cafile\s*=\s*.*$/m, opensslCaLine)
+      } else {
+        content += `\n${opensslCaLine}`
+      }
+    }
+
     fs.writeFileSync(iniPath, content)
+  }
+
+  private async ensureCacert(): Promise<string> {
+    const cacertPath = path.join(this.baseDir, 'cacert.pem')
+    if (fs.existsSync(cacertPath)) return cacertPath
+
+    console.log('Downloading cacert.pem...')
+    try {
+      const response = await axios({
+        url: 'https://curl.se/ca/cacert.pem',
+        method: 'GET',
+        responseType: 'arraybuffer'
+      })
+      fs.writeFileSync(cacertPath, response.data)
+      return cacertPath
+    } catch (error) {
+      console.error('Error downloading cacert.pem:', error)
+      return ''
+    }
   }
 }
