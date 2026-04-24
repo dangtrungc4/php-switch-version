@@ -15,14 +15,14 @@ import { useCallback, useEffect, useState, type JSX } from 'react'
 import { createPortal } from 'react-dom'
 
 export default function Projects(): JSX.Element {
-  const [projects, setProjects] = useState<any[]>([])
-  const [versions, setVersions] = useState<any[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [versions, setVersions] = useState<PHPVersion[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [projectToDelete, setProjectToDelete] = useState<any>(null)
-  const [editingProject, setEditingProject] = useState<any>(null)
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
+  const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [newProject, setNewProject] = useState({ name: '', path: '', phpVersionId: '' })
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -57,7 +57,9 @@ export default function Projects(): JSX.Element {
     if (folder) {
       const name = folder.split(/[\\/]/).pop() || ''
       if (showEditModal) {
-        setEditingProject({ ...editingProject, path: folder, name })
+        if (editingProject) {
+          setEditingProject({ ...editingProject, path: folder, name })
+        }
       } else {
         setNewProject({ ...newProject, path: folder, name })
       }
@@ -74,7 +76,7 @@ export default function Projects(): JSX.Element {
   }
 
   const handleUpdateProject = async () => {
-    if (!editingProject.name || !editingProject.path || !editingProject.phpVersionId) return
+    if (!editingProject || !editingProject.name || !editingProject.path || !editingProject.phpVersionId) return
     await window.api.updateProject(editingProject)
     setShowEditModal(false)
     setEditingProject(null)

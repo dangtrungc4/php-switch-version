@@ -21,6 +21,14 @@ export interface Project {
   phpVersionId: string
 }
 
+export interface AvailableVersion {
+  id: string
+  version: string
+  type: 'TS' | 'NTS'
+  arch: 'x64' | 'x86'
+  url: string
+}
+
 export class PHPManager {
   private baseDir = 'C:\\PHPManager'
   private versionsDir = path.join(this.baseDir, 'versions')
@@ -54,8 +62,8 @@ export class PHPManager {
       return {
         id: folder,
         version: parts[1] || folder,
-        arch: (parts[2] as any) || 'x64',
-        type: (parts[3] as any) || 'ts',
+        arch: (parts[2] as 'x64' | 'x86') || 'x64',
+        type: (parts[3] as 'ts' | 'nts') || 'ts',
         path: fullPath,
         installed: true,
         active: currentTarget.toLowerCase() === fullPath.toLowerCase()
@@ -73,9 +81,9 @@ export class PHPManager {
       if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
       if (!fs.existsSync(versionsDir)) fs.mkdirSync(versionsDir, { recursive: true })
       if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true })
-    } catch (err: any) {
+    } catch (err: unknown) {
       throw new Error(
-        `Failed to create directories: ${err.message}. Please ensure the app has Administrator rights.`
+        `Failed to create directories: ${err instanceof Error ? err.message : String(err)}. Please ensure the app has Administrator rights.`
       )
     }
 
@@ -86,7 +94,6 @@ export class PHPManager {
         method: 'GET',
         responseType: 'stream',
         timeout: 60000,
-
         headers: {
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -135,14 +142,14 @@ export class PHPManager {
           fs.copyFileSync(developmentIni, iniPath)
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (fs.existsSync(zipPath)) {
         try {
           fs.unlinkSync(zipPath)
         } catch (e) {}
       }
       console.error('Error installing version:', error)
-      throw new Error(error.message || 'Unknown error during installation')
+      throw new Error(error instanceof Error ? error.message : 'Unknown error during installation')
     }
   }
 
@@ -167,8 +174,8 @@ export class PHPManager {
 
       fs.rmSync(destDir, { recursive: true, force: true })
       return { success: true }
-    } catch (err: any) {
-      return { success: false, error: err.message }
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
     }
   }
 
@@ -205,6 +212,55 @@ export class PHPManager {
         }
       })
     })
+  }
+
+  async getAvailableVersions(): Promise<AvailableVersion[]> {
+    const url = 'https://windows.php.net/downloads/releases/releases.json'
+    try {
+      const response = await axios.get(url)
+      const data = response.data
+      const versions: AvailableVersion[] = []
+
+      Object.keys(data).forEach((majorMinor) => {
+        const release = data[majorMinor]
+        const version = release.version
+        const keys = Object.keys(release)
+
+        const ntsKeys = keys.filter(
+          (k) => k.startsWith('nts-') && k.endsWith('-x64') && release[k].zip
+        )
+        const tsKeys = keys.filter(
+          (k) => k.startsWith('ts-') && k.endsWith('-x64') && release[k].zip
+        )
+        const finalKeys = ntsKeys.length > 0 ? ntsKeys : tsKeys
+
+        finalKeys.forEach((k) => {
+          const type = k.startsWith('nts') ? 'NTS' : 'TS'
+          const zipPath = release[k].zip.path
+
+          versions.push({
+            id: `php-${version}-${k}`,
+            version: version,
+            type: type,
+            arch: 'x64',
+            url: `https://windows.php.net/downloads/releases/${zipPath}`
+          })
+        })
+      })
+
+      return versions.sort((a, b) => {
+        const va = a.version.split('.').map(Number)
+        const vb = b.version.split('.').map(Number)
+        for (let i = 0; i < 3; i++) {
+          if (va[i] > vb[i]) return -1
+          if (va[i] < vb[i]) return 1
+        }
+        return 0
+      })
+    } catch (error) {
+      console.error('Error fetching available versions:', error)
+      return []
+    }
   }
 
   async getTerminalCommand(phpPath: string, workingDir?: string): Promise<string> {

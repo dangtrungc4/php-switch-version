@@ -15,7 +15,7 @@ function cn(...inputs: ClassValue[]) {
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects'>('dashboard')
 
-  const tabs = [
+  const tabs: { id: 'dashboard' | 'projects'; label: string; icon: React.ComponentType<any> }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'projects', label: 'Projects', icon: FolderCode }
   ]
@@ -49,7 +49,7 @@ function App(): JSX.Element {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     'w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-sm font-bold transition-all duration-300 relative group',
                     isActive

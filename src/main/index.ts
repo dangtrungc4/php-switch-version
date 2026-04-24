@@ -89,6 +89,10 @@ app.whenReady().then(() => {
     return await phpManager.getInstalledVersions()
   })
 
+  ipcMain.handle('get-available-versions', async () => {
+    return await phpManager.getAvailableVersions()
+  })
+
   ipcMain.handle('install-version', async (_, { url, id }) => {
     await phpManager.downloadAndInstall(url, id)
     return { success: true }

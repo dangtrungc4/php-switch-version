@@ -12,18 +12,47 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 export default function Dashboard() {
-  const [versions, setVersions] = useState<any[]>([])
+  const [versions, setVersions] = useState<PHPVersion[]>([])
+  const [availableVersions, setAvailableVersions] = useState<AvailableVersion[]>([])
   const [, setLoading] = useState(true)
   const [switching, setSwitching] = useState<string | null>(null)
   const [showReleasesModal, setShowReleasesModal] = useState(false)
-  const [installingVersion, setInstallingVersion] = useState<any>(null)
+  const [installingVersion, setInstallingVersion] = useState<AvailableVersion | null>(null)
   const [installStep, setInstallStep] = useState<string>('')
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    onConfirm: () => void
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  })
+
+  const [infoModal, setInfoModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+  }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  })
+
+  const showInfo = (title: string, message: string) =>
+    setInfoModal({ isOpen: true, title, message })
 
   const fetchVersions = async () => {
     setLoading(true)
     try {
-      const data = await window.api.getInstalledVersions()
-      setVersions(data)
+      const [installed, available] = await Promise.all([
+        window.api.getInstalledVersions(),
+        window.api.getAvailableVersions()
+      ])
+      setVersions(installed)
+      setAvailableVersions(available)
     } catch (err) {
       console.error(err)
     } finally {
@@ -47,7 +76,7 @@ export default function Dashboard() {
     }
   }
 
-  const handleInstall = async (v: any) => {
+  const handleInstall = async (v: AvailableVersion) => {
     setInstallingVersion(v)
     setInstallStep('Downloading ZIP from windows.php.net...')
     try {
@@ -63,7 +92,7 @@ export default function Dashboard() {
         setInstallStep('')
       }, 1000)
     } catch (err) {
-      alert('Error installing version: ' + err)
+      showInfo('Installation Failed', String(err))
       setInstallingVersion(null)
       setInstallStep('')
     }
@@ -73,71 +102,11 @@ export default function Dashboard() {
     if (activeVersion) {
       await window.api.openTerminal(activeVersion.path)
     } else {
-      alert('No active PHP version selected.')
+      showInfo('No Active Version', 'Please switch to a PHP version before opening the terminal.')
     }
   }
 
-  const activeVersion = versions.find((v) => v.installed && v.active) // We need an active flag in future
-
-  // Mock available versions if none installed
-  const availableVersions = [
-    {
-      id: 'php-8.3.6',
-      version: '8.3.6',
-      type: 'TS',
-      arch: 'x64',
-      url: 'https://windows.php.net/downloads/releases/archives/php-8.3.6-Win32-vs16-x64.zip'
-    },
-    {
-      id: 'php-8.2.19',
-      version: '8.2.19',
-      type: 'TS',
-      arch: 'x64',
-      url: 'https://windows.php.net/downloads/releases/archives/php-8.2.19-Win32-vs16-x64.zip'
-    },
-    {
-      id: 'php-8.1.28',
-      version: '8.1.28',
-      type: 'TS',
-      arch: 'x64',
-      url: 'https://windows.php.net/downloads/releases/archives/php-8.1.28-Win32-vs16-x64.zip'
-    },
-    {
-      id: 'php-8.0.30',
-      version: '8.0.30',
-      type: 'TS',
-      arch: 'x64',
-      url: 'https://windows.php.net/downloads/releases/archives/php-8.0.30-Win32-vs16-x64.zip'
-    },
-    {
-      id: 'php-7.4.33',
-      version: '7.4.33',
-      type: 'TS',
-      arch: 'x64',
-      url: 'https://windows.php.net/downloads/releases/archives/php-7.4.33-Win32-vc15-x64.zip'
-    },
-    {
-      id: 'php-7.3.33',
-      version: '7.3.33',
-      type: 'TS',
-      arch: 'x64',
-      url: 'https://windows.php.net/downloads/releases/archives/php-7.3.33-Win32-vc15-x64.zip'
-    },
-    {
-      id: 'php-7.2.34',
-      version: '7.2.34',
-      type: 'TS',
-      arch: 'x64',
-      url: 'https://windows.php.net/downloads/releases/archives/php-7.2.34-Win32-vc15-x64.zip'
-    },
-    {
-      id: 'php-5.6.40',
-      version: '5.6.40',
-      type: 'TS',
-      arch: 'x64',
-      url: 'https://windows.php.net/downloads/releases/archives/php-5.6.40-Win32-vc11-x64.zip'
-    }
-  ]
+  const activeVersion = versions.find((v) => v.installed && v.active)
 
   return (
     <div className="space-y-8">
@@ -285,11 +254,16 @@ export default function Dashboard() {
                     php.ini
                   </button>
                   <button
-                    onClick={async () => {
-                      if (confirm('Are you sure you want to uninstall this PHP version?')) {
-                        await window.api.uninstallPHP(v.id)
-                        fetchVersions()
-                      }
+                    onClick={() => {
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'Uninstall PHP',
+                        message: `Are you sure you want to uninstall PHP ${v.version}? This will permanently remove all files and settings for this version.`,
+                        onConfirm: async () => {
+                          await window.api.uninstallPHP(v.id)
+                          fetchVersions()
+                        }
+                      })
                     }}
                     className="flex-1 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-[10px] font-bold transition-all border border-red-500/10"
                   >
@@ -369,41 +343,44 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-3">
                     {availableVersions.map((v) => {
                       const isInstalled = versions.some((iv) => iv.id === v.id)
                       return (
                         <div
                           key={v.id}
-                          className="glass rounded-2xl p-6 border border-black/5 dark:border-white/5 flex flex-col items-center text-center group hover:border-indigo-500/30 hover:bg-black/5 dark:bg-white/5 transition-all duration-300 relative overflow-hidden"
+                          className="glass rounded-2xl p-4 border border-black/5 dark:border-white/5 flex items-center gap-6 group hover:border-indigo-500/30 hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-300 relative overflow-hidden"
                         >
-                          <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-10 transition-opacity">
-                            <Terminal className="w-12 h-12 text-text-main" />
-                          </div>
-
-                          <div className="w-16 h-16 rounded-2xl bg-black/10 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500 shadow-xl shadow-black/20">
-                            <span className="text-2xl font-black text-text-muted group-hover:text-indigo-400">
+                          <div className="shrink-0 w-12 h-12 rounded-xl bg-black/10 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-lg shadow-black/10">
+                            <span className="text-lg font-black text-text-muted group-hover:text-indigo-400">
                               {v.version.split('.')[0]}
                             </span>
                           </div>
 
-                          <h4 className="font-bold text-xl text-text-main">PHP {v.version}</h4>
-                          <div className="flex gap-2 mt-2 mb-6">
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/10 dark:bg-slate-800 text-text-muted font-bold uppercase tracking-wider">
-                              {v.type}
-                            </span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/10 dark:bg-slate-800 text-text-muted font-bold uppercase tracking-wider">
-                              {v.arch}
-                            </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-bold text-lg text-text-main">PHP {v.version}</h4>
+                              <div className="flex gap-1.5">
+                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/5 text-text-muted font-bold uppercase tracking-wider border border-black/5 dark:border-white/5">
+                                  {v.type}
+                                </span>
+                                <span className="text-[9px] px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/5 text-text-muted font-bold uppercase tracking-wider border border-black/5 dark:border-white/5">
+                                  {v.arch}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-text-muted mt-0.5 truncate">
+                              Ready to install from official archives
+                            </p>
                           </div>
 
                           <button
                             disabled={isInstalled || !!installingVersion}
                             onClick={() => handleInstall(v)}
                             className={cn(
-                              'w-full py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2',
+                              'px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 min-w-[140px]',
                               isInstalled
-                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-default'
                                 : 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 disabled:opacity-50'
                             )}
                           >
@@ -433,10 +410,88 @@ export default function Dashboard() {
           </div>,
           document.body
         )}
+
+      {/* Confirm Modal */}
+      {confirmModal.isOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+              onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="w-full max-w-sm glass rounded-3xl p-8 relative z-10 border-red-500/20 shadow-2xl shadow-red-500/5"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6 mx-auto">
+                <X className="w-8 h-8 text-red-400" />
+              </div>
+
+              <h3 className="text-xl font-bold text-text-main text-center mb-2">
+                {confirmModal.title}
+              </h3>
+              <p className="text-text-muted text-center text-sm mb-8 leading-relaxed">
+                {confirmModal.message}
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+                  className="flex-1 py-3 bg-black/5 hover:bg-black/10 dark:bg-white/5 text-text-main rounded-xl font-bold transition-all border border-black/10 dark:border-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    confirmModal.onConfirm()
+                    setConfirmModal({ ...confirmModal, isOpen: false })
+                  }}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-red-500/20 hover:shadow-red-500/40"
+                >
+                  Uninstall
+                </button>
+              </div>
+            </motion.div>
+          </div>,
+          document.body
+        )}
+      {/* Info Modal */}
+      {infoModal.isOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+              onClick={() => setInfoModal({ ...infoModal, isOpen: false })}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="w-full max-w-sm glass rounded-3xl p-8 relative z-10 border border-indigo-500/20 shadow-2xl shadow-indigo-500/5"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 mx-auto">
+                <ShieldCheck className="w-8 h-8 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-bold text-text-main text-center mb-2">
+                {infoModal.title}
+              </h3>
+              <p className="text-text-muted text-center text-sm mb-8 leading-relaxed">
+                {infoModal.message}
+              </p>
+              <button
+                onClick={() => setInfoModal({ ...infoModal, isOpen: false })}
+                className="w-full py-3 bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40"
+              >
+                OK
+              </button>
+            </motion.div>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }
 
-function cn(...inputs: any[]) {
+function cn(...inputs: (string | boolean | undefined | null)[]) {
   return inputs.filter(Boolean).join(' ')
 }

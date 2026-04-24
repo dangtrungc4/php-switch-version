@@ -1,7 +1,5 @@
 import { electronAPI } from '@electron-toolkit/preload'
-import { contextBridge, ipcRenderer } from 'electron'
-
-// Custom APIs for renderer
+import { contextBridge, ipcRenderer } from 'electron'// Custom APIs for renderer
 const api = {
   getInstalledVersions: () => ipcRenderer.invoke('get-installed-versions'),
   installVersion: (data: { url: string; id: string }) =>
@@ -17,7 +15,8 @@ const api = {
   openFolder: (path: string) => ipcRenderer.invoke('open-folder', path),
   deleteProject: (id: string) => ipcRenderer.invoke('delete-project', id),
   uninstallPHP: (id: string) => ipcRenderer.invoke('uninstall-php', id),
-  openPhpIni: (phpPath: string) => ipcRenderer.invoke('open-php-ini', phpPath)
+  openPhpIni: (phpPath: string) => ipcRenderer.invoke('open-php-ini', phpPath),
+  getAvailableVersions: () => ipcRenderer.invoke('get-available-versions')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
