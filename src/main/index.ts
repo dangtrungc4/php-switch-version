@@ -109,25 +109,61 @@ app.whenReady().then((): void => {
     return await phpManager.uninstall(id)
   })
 
+  const watchers = new Map<string, fs.FSWatcher>()
+
   ipcMain.handle(
     'open-php-ini',
-    async (_, phpPath): Promise<{ success: boolean; error?: string }> => {
+    async (event, phpPath): Promise<{ success: boolean; error?: string }> => {
       const iniPath = path.join(phpPath, 'php.ini')
+
+      const openAndWatch = async (p: string): Promise<void> => {
+        shell.openPath(p)
+
+        // Watch for changes if not already watching
+        if (!watchers.has(p)) {
+          let debounceTimer: NodeJS.Timeout | null = null
+          const watcher = fs.watch(p, async (eventType) => {
+            if (eventType === 'change') {
+              if (debounceTimer) clearTimeout(debounceTimer)
+              debounceTimer = setTimeout(async () => {
+                console.log(`Detected change in ${p}, restarting PHP processes...`)
+                const result = await phpManager.restartPhpProcesses()
+                if (result.success) {
+                  event.sender.send('php-config-applied', { path: p })
+                }
+              }, 500)
+            }
+          })
+          watchers.set(p, watcher)
+
+          // Cleanup watcher if needed (e.g. on app quit)
+          app.on('before-quit', () => {
+            watcher.close()
+          })
+        }
+      }
+
       if (fs.existsSync(iniPath)) {
-        shell.openPath(iniPath)
+        phpManager.fixPhpIni(phpPath)
+        await openAndWatch(iniPath)
         return { success: true }
       } else {
         // Try development or production template
         const devIni = path.join(phpPath, 'php.ini-development')
         if (fs.existsSync(devIni)) {
           fs.copyFileSync(devIni, iniPath)
-          shell.openPath(iniPath)
+          phpManager.fixPhpIni(phpPath)
+          await openAndWatch(iniPath)
           return { success: true }
         }
       }
       return { success: false, error: 'php.ini not found' }
     }
   )
+
+  ipcMain.handle('restart-php', async (): Promise<{ success: boolean; error?: string }> => {
+    return await phpManager.restartPhpProcesses()
+  })
 
   ipcMain.handle('get-projects', async (): Promise<Project[]> => {
     const db = await getDb()

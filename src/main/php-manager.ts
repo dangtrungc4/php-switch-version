@@ -142,6 +142,8 @@ export class PHPManager {
           fs.copyFileSync(developmentIni, iniPath)
         }
       }
+
+      this.fixPhpIni(destDir)
     } catch (error: unknown) {
       if (fs.existsSync(zipPath)) {
         try {
@@ -186,6 +188,9 @@ export class PHPManager {
   async switchGlobal(id: string): Promise<void> {
     const targetDir = path.join(this.versionsDir, id)
     if (!fs.existsSync(targetDir)) throw new Error('Version not found')
+
+    // Fix php.ini before switching to ensure extensions work
+    this.fixPhpIni(targetDir)
 
     const psScript = `
       $link = '${this.currentLink}';
@@ -270,5 +275,74 @@ export class PHPManager {
   async getTerminalCommand(phpPath: string, workingDir?: string): Promise<string> {
     const cdCmd = workingDir ? `cd /d "${workingDir}" & ` : ''
     return `cmd /k "${cdCmd}set PATH=${phpPath};%PATH% & php -v"`
+  }
+
+  async restartPhpProcesses(): Promise<{ success: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      // taskkill /F /IM php-cgi.exe /T
+      // /F: Forcefully terminate the process
+      // /IM: Image name
+      // /T: Terminate child processes as well
+      const command = 'taskkill /F /IM php-cgi.exe /T'
+      sudo.exec(command, { name: 'PHP Version Manager' }, (error, _stdout, stderr) => {
+        if (error) {
+          // If error is "The process ... not found", it's actually a success (nothing to kill)
+          if (stderr && stderr.toString().includes('not found')) {
+            return resolve({ success: true })
+          }
+          console.error('Error restarting PHP processes:', error)
+          return resolve({ success: false, error: error.message })
+        }
+        resolve({ success: true })
+      })
+    })
+  }
+
+  public fixPhpIni(destDir: string): void {
+    const iniPath = path.join(destDir, 'php.ini')
+    if (!fs.existsSync(iniPath)) return
+
+    let content = fs.readFileSync(iniPath, 'utf8')
+    const extDir = path.join(destDir, 'ext')
+
+    // Fix extension_dir
+    const extDirFormatted = extDir.replace(/\\/g, '/')
+    const extDirLine = `extension_dir = "${extDirFormatted}"`
+
+    if (content.includes('extension_dir = "ext"')) {
+      content = content.replace(/;?\s*extension_dir\s*=\s*"ext"/, extDirLine)
+    } else if (!content.includes('extension_dir = "')) {
+      // Add it after [PHP] tag or at the beginning
+      if (content.includes('[PHP]')) {
+        content = content.replace('[PHP]', `[PHP]\n${extDirLine}`)
+      } else {
+        content = `${extDirLine}\n` + content
+      }
+    } else {
+      // Try to replace any existing extension_dir
+      content = content.replace(/^;?\s*extension_dir\s*=\s*".*"/m, extDirLine)
+    }
+
+    // Enable common extensions
+    const extensions = [
+      'curl',
+      'fileinfo',
+      'gd',
+      'mbstring',
+      'mysqli',
+      'openssl',
+      'pdo_mysql',
+      'pdo_sqlite',
+      'sqlite3'
+    ]
+
+    extensions.forEach((ext) => {
+      const regex = new RegExp(`^;\\s*extension\\s*=\\s*${ext}`, 'm')
+      if (regex.test(content)) {
+        content = content.replace(regex, `extension=${ext}`)
+      }
+    })
+
+    fs.writeFileSync(iniPath, content)
   }
 }

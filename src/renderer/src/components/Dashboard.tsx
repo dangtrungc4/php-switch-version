@@ -63,6 +63,14 @@ export default function Dashboard(): JSX.Element {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchVersions()
+
+    // Listen for php.ini changes
+    window.api.onPhpConfigApplied((data) => {
+      showInfo(
+        'Configuration Applied',
+        `Changes in ${data.path} have been applied. Any running PHP processes were restarted.`
+      )
+    })
   }, [])
 
   const handleSwitch = async (id: string): Promise<void> => {

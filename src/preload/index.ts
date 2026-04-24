@@ -17,7 +17,10 @@ const api = {
   deleteProject: (id: string) => ipcRenderer.invoke('delete-project', id),
   uninstallPHP: (id: string) => ipcRenderer.invoke('uninstall-php', id),
   openPhpIni: (phpPath: string) => ipcRenderer.invoke('open-php-ini', phpPath),
-  getAvailableVersions: () => ipcRenderer.invoke('get-available-versions')
+  getAvailableVersions: () => ipcRenderer.invoke('get-available-versions'),
+  restartPhp: () => ipcRenderer.invoke('restart-php'),
+  onPhpConfigApplied: (callback: (data: { path: string }) => void) =>
+    ipcRenderer.on('php-config-applied', (_event, data) => callback(data))
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

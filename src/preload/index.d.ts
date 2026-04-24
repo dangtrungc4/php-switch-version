@@ -39,6 +39,8 @@ interface Window {
     uninstallPHP: (id: string) => Promise<{ success: boolean }>
     openPhpIni: (phpPath: string) => Promise<{ success: boolean }>
     getAvailableVersions: () => Promise<AvailableVersion[]>
+    restartPhp: () => Promise<{ success: boolean; error?: string }>
+    onPhpConfigApplied: (callback: (data: { path: string }) => void) => void
   }
   electron: ElectronAPI
 }
